@@ -2,6 +2,7 @@
 using CommunityToolkit.Mvvm.Input;
 using HomeLibrary.Data;
 using HomeLibrary.Models;
+using System.Windows;
 
 namespace HomeLibrary.ViewModels
 {
@@ -19,28 +20,44 @@ namespace HomeLibrary.ViewModels
         }
 
         [RelayCommand]
-        private void Save(System.Windows.Window window)
+        private async void Save(Window window)
         {
             if (string.IsNullOrWhiteSpace(Book.Title) ||
                 string.IsNullOrWhiteSpace(Book.Author))
             {
-                System.Windows.MessageBox.Show("Название и автор обязательны!",
-                    "Ошибка", System.Windows.MessageBoxButton.OK,
-                    System.Windows.MessageBoxImage.Warning);
+                MessageBox.Show("Название и автор обязательны!",
+                    "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            if (_isNew)
-                _repository.Insert(Book);
-            else
-                _repository.Update(Book);
+            // Получаем актуальное содержимое редактора перед сохранением
+            if (window is Views.BookEditorWindow editorWindow)
+            {
+                var xmlContent = await editorWindow.GetTableOfContentsXmlAsync();
+                Book.TableOfContentsXml = xmlContent;
 
-            window.DialogResult = true;
-            window.Close();
+                System.Diagnostics.Debug.WriteLine($"Сохраняем XML: {xmlContent}");
+            }
+
+            try
+            {
+                if (_isNew)
+                    _repository.Insert(Book);
+                else
+                    _repository.Update(Book);
+
+                window.DialogResult = true;
+                window.Close();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка сохранения: {ex.Message}",
+                    "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         [RelayCommand]
-        private void Cancel(System.Windows.Window window)
+        private void Cancel(Window window)
         {
             window.DialogResult = false;
             window.Close();

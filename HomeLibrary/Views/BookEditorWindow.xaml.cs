@@ -2,7 +2,7 @@
 using HomeLibrary.Models;
 using HomeLibrary.ViewModels;
 using Microsoft.Web.WebView2.Core;
-
+using System.Text.Json;
 
 namespace HomeLibrary.Views
 {
@@ -20,79 +20,94 @@ namespace HomeLibrary.Views
             await HtmlEditor.EnsureCoreWebView2Async(
                 await CoreWebView2Environment.CreateAsync());
 
-            // HTML с TinyMCE (загружается с CDN)
+            // HTML с Quill.js (бесплатный редактор)
             var html = @"
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset='utf-8'>
-    <script src='https://cdn.tiny.cloud/1/no-api-key/tinymce/6/tinymce.min.js' referrerpolicy='origin'></script>
+    <link href='https://cdn.quilljs.com/1.3.6/quill.snow.css' rel='stylesheet'>
+    <script src='https://cdn.quilljs.com/1.3.6/quill.js'></script>
+    <style>
+        body { margin: 0; padding: 10px; font-family: Arial, sans-serif; }
+        #editor { height: 400px; font-size: 14px; }
+        .ql-container { font-family: Arial, sans-serif; }
+    </style>
 </head>
 <body>
-    <textarea id='editor'></textarea>
+    <div id='editor'></div>
     <script>
-        tinymce.init({
-            selector: '#editor',
-            height: '100%',
-            menubar: false,
-            plugins: 'lists link image table code',
-            toolbar: 'undo redo | bold italic underline | bullist numlist | link image | code',
-            setup: function(ed) {
-                ed.on('init', function() {
-                    // Получаем начальный XML от C#
-                    window.chrome.webview.postMessage({ type: 'ready' });
-                });
-                ed.on('change', function() {
-                    window.chrome.webview.postMessage({
-                        type: 'content',
-                        html: ed.getContent()
-                    });
-                });
+        var quill = new Quill('#editor', {
+            theme: 'snow',
+            placeholder: 'Введите оглавление книги...',
+            modules: {
+                toolbar: [
+                    [{ 'header': [1, 2, 3, false] }],
+                    ['bold', 'italic', 'underline'],
+                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                    ['link', 'image'],
+                    ['clean']
+                ]
             }
         });
 
-        // Слушаем сообщения от C#
-        window.chrome.webview.addEventListener('message', function(event) {
-            if (event.data.type === 'setContent') {
-                tinymce.get('editor').setContent(event.data.html || '');
-            }
-        });
+        // Функция для получения HTML содержимого
+        window.getEditorHtml = function() {
+            return quill.root.innerHTML;
+        };
+
+        // Функция для установки HTML содержимого
+        window.setEditorHtml = function(html) {
+            quill.root.innerHTML = html || '';
+        };
     </script>
 </body>
 </html>";
 
             HtmlEditor.NavigateToString(html);
 
-            // Обработка сообщений от HTML
-            HtmlEditor.WebMessageReceived += (s, args) =>
-            {
-                var json = args.TryGetWebMessageAsString();
-                // Простейший парсинг (для продакшена используйте System.Text.Json)
-                if (json.Contains("\"type\":\"ready\""))
-                {
-                    var vm = (BookEditorViewModel)DataContext;
-                    var xml = vm.Book.TableOfContentsXml;
-                    // Извлекаем содержимое между тегами <content>...</content>, если есть
-                    var content = ExtractContent(xml);
-                    HtmlEditor.PostWebMessageAsJson(
-                        $"{{\"type\":\"setContent\",\"html\":{System.Text.Json.JsonSerializer.Serialize(content)}}}");
-                }
-                else if (json.Contains("\"type\":\"content\""))
-                {
-                    // Извлекаем html из JSON
-                    var start = json.IndexOf("\"html\":") + 8;
-                    var end = json.LastIndexOf("\"");
-                    var htmlContent = json.Substring(start, end - start);
-                    // Декодируем escape-последовательности
-                    htmlContent = System.Text.Json.JsonSerializer.Deserialize<string>(
-                        "\"" + htmlContent + "\"") ?? string.Empty;
+            // Ждём загрузки HTML
+            await Task.Delay(500);
 
-                    var vm = (BookEditorViewModel)DataContext;
-                    // Оборачиваем в XML
-                    vm.Book.TableOfContentsXml =
-                        $"<TableOfContents><Content><![CDATA[{htmlContent}]]></Content></TableOfContents>";
-                }
-            };
+            // Загружаем существующее оглавление, если оно есть
+            var vm = (BookEditorViewModel)DataContext;
+            var existingContent = ExtractContent(vm.Book.TableOfContentsXml);
+            if (!string.IsNullOrWhiteSpace(existingContent))
+            {
+                // Экранируем содержимое для JavaScript
+                var escapedContent = existingContent
+                    .Replace("\\", "\\\\")
+                    .Replace("'", "\\'")
+                    .Replace("\n", "\\n")
+                    .Replace("\r", "\\r");
+
+                await HtmlEditor.ExecuteScriptAsync(
+                    $"window.setEditorHtml('{escapedContent}');");
+            }
+        }
+
+        // Публичный метод для получения XML из редактора
+        public async Task<string> GetTableOfContentsXmlAsync()
+        {
+            try
+            {
+                // Выполняем JavaScript и получаем HTML содержимое
+                var result = await HtmlEditor.ExecuteScriptAsync("window.getEditorHtml();");
+
+                // ExecuteScriptAsync возвращает JSON-строку в кавычках, нужно убрать их
+                var htmlContent = JsonSerializer.Deserialize<string>(result) ?? string.Empty;
+
+                if (string.IsNullOrWhiteSpace(htmlContent))
+                    return string.Empty;
+
+                // Оборачиваем в XML
+                return $"<TableOfContents><Content><![CDATA[{htmlContent}]]></Content></TableOfContents>";
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Ошибка получения содержимого: {ex.Message}");
+                return string.Empty;
+            }
         }
 
         private static string ExtractContent(string xml)
@@ -101,8 +116,7 @@ namespace HomeLibrary.Views
             try
             {
                 var doc = System.Xml.Linq.XDocument.Parse(xml);
-                var content = doc.Root?.Element("Content")?.Value;
-                return content ?? string.Empty;
+                return doc.Root?.Element("Content")?.Value ?? string.Empty;
             }
             catch
             {
