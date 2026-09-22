@@ -10,7 +10,15 @@ namespace HomeLibrary.Data
         private static SqlConnection OpenConnection()
         {
             var conn = new SqlConnection(ConnectionHelper.ConnectionString);
-            conn.Open();
+            try
+            {
+                conn.Open();
+            }
+            catch (SqlException ex)
+            {
+                throw new Exception(
+                    "Не удалось подключиться к БД. Убедитесь, что SQL Server LocalDB запущен и база HomeLibrary создана.", ex);
+            }
             return conn;
         }
 

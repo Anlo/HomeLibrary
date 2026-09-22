@@ -20,6 +20,14 @@ namespace HomeLibrary.Views
             await HtmlEditor.EnsureCoreWebView2Async(
                 await CoreWebView2Environment.CreateAsync());
 
+            // Подписываемся на событие завершения навигации
+            var tcs = new TaskCompletionSource<bool>();
+            HtmlEditor.NavigationCompleted += (s, ev) =>
+            {
+                tcs.TrySetResult(ev.IsSuccess);
+            };
+
+
             // HTML с Quill.js (бесплатный редактор)
             var html = @"
 <!DOCTYPE html>
@@ -67,7 +75,7 @@ namespace HomeLibrary.Views
             HtmlEditor.NavigateToString(html);
 
             // Ждём загрузки HTML
-            await Task.Delay(500);
+            await tcs.Task;
 
             // Загружаем существующее оглавление, если оно есть
             var vm = (BookEditorViewModel)DataContext;
