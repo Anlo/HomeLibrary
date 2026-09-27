@@ -1,0 +1,649 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>HTML-редактор оглавления</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background: #f0f2f5;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            padding: 20px 30px;
+        }
+
+            .header h1 {
+                font-size: 22px;
+                font-weight: 600;
+            }
+
+            .header p {
+                font-size: 13px;
+                opacity: 0.9;
+                margin-top: 4px;
+            }
+
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            padding: 10px 15px;
+            background: #f8f9fb;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .toolbar-group {
+            display: flex;
+            gap: 2px;
+            padding-right: 10px;
+            margin-right: 6px;
+            border-right: 1px solid #e0e0e0;
+        }
+
+            .toolbar-group:last-child {
+                border-right: none;
+            }
+
+        .tool-btn {
+            min-width: 34px;
+            height: 34px;
+            padding: 0 10px;
+            border: 1px solid transparent;
+            background: transparent;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            color: #444;
+            transition: all 0.15s;
+            font-weight: 500;
+        }
+
+            .tool-btn:hover {
+                background: #e8ecf3;
+                border-color: #d0d7e2;
+            }
+
+            .tool-btn:active {
+                background: #d4dbe8;
+            }
+
+            .tool-btn select {
+                border: none;
+                background: transparent;
+                font-size: 13px;
+                cursor: pointer;
+                outline: none;
+            }
+
+        .editor-area {
+            min-height: 350px;
+            padding: 25px 30px;
+            outline: none;
+            font-size: 15px;
+            line-height: 1.6;
+            color: #222;
+            overflow-y: auto;
+            max-height: 500px;
+        }
+
+            .editor-area:focus {
+                background: #fafbfd;
+            }
+
+            .editor-area h1 {
+                font-size: 24px;
+                margin: 10px 0;
+                color: #1a1a1a;
+            }
+
+            .editor-area h2 {
+                font-size: 20px;
+                margin: 8px 0;
+                color: #2a2a2a;
+            }
+
+            .editor-area h3 {
+                font-size: 17px;
+                margin: 6px 0;
+                color: #3a3a3a;
+            }
+
+            .editor-area ul, .editor-area ol {
+                margin: 8px 0 8px 30px;
+            }
+
+            .editor-area p {
+                margin: 6px 0;
+            }
+
+        .actions {
+            display: flex;
+            gap: 10px;
+            padding: 15px 30px;
+            background: #f8f9fb;
+            border-top: 1px solid #e5e7eb;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 9px 18px;
+            border: none;
+            border-radius: 7px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.15s;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: #fff;
+        }
+
+            .btn-primary:hover {
+                background: #5568d3;
+            }
+
+        .btn-secondary {
+            background: #e5e7eb;
+            color: #333;
+        }
+
+            .btn-secondary:hover {
+                background: #d4d7de;
+            }
+
+        .btn-success {
+            background: #10b981;
+            color: #fff;
+        }
+
+            .btn-success:hover {
+                background: #0ea371;
+            }
+
+        .btn-danger {
+            background: #ef4444;
+            color: #fff;
+        }
+
+            .btn-danger:hover {
+                background: #dc2626;
+            }
+
+        .xml-panel {
+            border-top: 1px solid #e5e7eb;
+            display: none;
+        }
+
+            .xml-panel.active {
+                display: block;
+            }
+
+        .xml-panel-header {
+            padding: 12px 30px;
+            background: #1e293b;
+            color: #cbd5e1;
+            font-size: 13px;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .xml-view {
+            background: #0f172a;
+            color: #e2e8f0;
+            padding: 20px 30px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+            .xml-view .tag {
+                color: #7dd3fc;
+            }
+
+            .xml-view .attr {
+                color: #fbbf24;
+            }
+
+            .xml-view .val {
+                color: #86efac;
+            }
+
+            .xml-view .text {
+                color: #f1f5f9;
+            }
+
+        .status-bar {
+            padding: 10px 30px;
+            background: #f8f9fb;
+            font-size: 12px;
+            color: #6b7280;
+            border-top: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            background: #10b981;
+            color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: all 0.3s;
+            z-index: 1000;
+        }
+
+            .toast.show {
+                opacity: 1;
+                transform: translateY(0);
+            }
+
+            .toast.error {
+                background: #ef4444;
+            }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header">
+            <h1>📚 Редактор оглавления книги</h1>
+            <p>Форматируйте содержимое и сохраняйте в XML-формат</p>
+        </div>
+
+        <div class="toolbar" id="toolbar">
+            <div class="toolbar-group">
+                <select class="tool-btn" id="formatBlock" title="Стиль абзаца">
+                    <option value="p">Обычный текст</option>
+                    <option value="h1">Заголовок 1</option>
+                    <option value="h2">Заголовок 2</option>
+                    <option value="h3">Заголовок 3</option>
+                </select>
+            </div>
+            <div class="toolbar-group">
+                <button class="tool-btn" data-cmd="bold" title="Жирный (Ctrl+B)"><b>Ж</b></button>
+                <button class="tool-btn" data-cmd="italic" title="Курсив (Ctrl+I)"><i>К</i></button>
+                <button class="tool-btn" data-cmd="underline" title="Подчёркнутый (Ctrl+U)"><u>П</u></button>
+                <button class="tool-btn" data-cmd="strikeThrough" title="Зачёркнутый"><s>З</s></button>
+            </div>
+            <div class="toolbar-group">
+                <button class="tool-btn" data-cmd="insertUnorderedList" title="Маркированный список">• Список</button>
+                <button class="tool-btn" data-cmd="insertOrderedList" title="Нумерованный список">1. Список</button>
+            </div>
+            <div class="toolbar-group">
+                <button class="tool-btn" data-cmd="justifyLeft" title="По левому краю">⇤</button>
+                <button class="tool-btn" data-cmd="justifyCenter" title="По центру">≡</button>
+                <button class="tool-btn" data-cmd="justifyRight" title="По правому краю">⇥</button>
+            </div>
+            <div class="toolbar-group">
+                <input type="color" class="tool-btn" id="foreColor" title="Цвет текста" style="padding:4px;cursor:pointer;">
+                <button class="tool-btn" data-cmd="removeFormat" title="Очистить форматирование">✕</button>
+            </div>
+        </div>
+
+        <div class="editor-area" id="editor" contenteditable="true">
+            <h1>Глава 1. Введение</h1>
+            <p>Это пример оглавления книги. Вы можете <b>редактировать</b> этот текст, добавлять новые разделы, форматировать их и сохранять результат в XML.</p>
+            <h2>1.1. Основные понятия</h2>
+            <ul>
+                <li>Пункт первый</li>
+                <li>Пункт второй</li>
+            </ul>
+            <h2>1.2. История вопроса</h2>
+            <p>Описание исторического контекста...</p>
+            <h1>Глава 2. Основная часть</h1>
+            <h3>2.1. Теоретические основы</h3>
+            <p>Текст подраздела...</p>
+        </div>
+
+        <div class="actions">
+            <button class="btn btn-primary" onclick="showXml()">📄 Показать XML</button>
+            <button class="btn btn-success" onclick="copyXml()">📋 Копировать XML</button>
+            <button class="btn btn-secondary" onclick="downloadXml()">💾 Скачать XML</button>
+            <button class="btn btn-secondary" onclick="loadSampleXml()">📂 Загрузить пример XML</button>
+            <button class="btn btn-danger" onclick="clearEditor()">🗑 Очистить</button>
+        </div>
+
+        <div class="xml-panel" id="xmlPanel">
+            <div class="xml-panel-header">
+                <span>📄 Результат в формате XML</span>
+                <button class="tool-btn" style="color:#fff;" onclick="hideXml()">✕ Закрыть</button>
+            </div>
+            <div class="xml-view" id="xmlView"></div>
+        </div>
+
+        <div class="status-bar">
+            <span id="wordCount">Слов: 0 | Символов: 0</span>
+            <span>Сохраняется в XML-поле базы данных</span>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+  const editor = document.getElementById('editor');
+  const xmlPanel = document.getElementById('xmlPanel');
+  const xmlView = document.getElementById('xmlView');
+  const toast = document.getElementById('toast');
+
+  // Обработка команд панели инструментов
+  document.querySelectorAll('.tool-btn[data-cmd]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.execCommand(btn.dataset.cmd, false, null);
+      editor.focus();
+    });
+  });
+
+  // Смена стиля абзаца
+  document.getElementById('formatBlock').addEventListener('change', (e) => {
+    document.execCommand('formatBlock', false, e.target.value);
+    editor.focus();
+  });
+
+  // Цвет текста
+  document.getElementById('foreColor').addEventListener('input', (e) => {
+    document.execCommand('foreColor', false, e.target.value);
+    editor.focus();
+  });
+
+  // Преобразование HTML в XML-структуру оглавления
+  function htmlToXml() {
+    const clone = editor.cloneNode(true);
+    let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
+    xml += '<TableOfContents>\n';
+    xml += '  <BookInfo>\n';
+    xml += '    <Generated>' + new Date().toISOString() + '</Generated>\n';
+    xml += '  </BookInfo>\n';
+    xml += '  <Content>\n';
+    xml += nodeToXml(clone.childNodes, 4);
+    xml += '  </Content>\n';
+    xml += '</TableOfContents>';
+    return xml;
+  }
+
+  function nodeToXml(nodes, indent) {
+    let result = '';
+    const pad = ' '.repeat(indent);
+    nodes.forEach(node => {
+      if (node.nodeType === 3) { // Text
+        const text = node.textContent.trim();
+        if (text) result += pad + '<Text>' + escapeXml(text) + '</Text>\n';
+      } else if (node.nodeType === 1) { // Element
+        const tag = node.tagName.toLowerCase();
+        if (tag === 'br') {
+          result += pad + '<LineBreak/>\n';
+        } else if (['h1','h2','h3','h4'].includes(tag)) {
+          result += pad + '<Heading level="' + tag.substring(1) + '">\n';
+          result += inlineToXml(node.childNodes, indent + 2);
+          result += pad + '</Heading>\n';
+        } else if (tag === 'p') {
+          result += pad + '<Paragraph>\n';
+          result += inlineToXml(node.childNodes, indent + 2);
+          result += pad + '</Paragraph>\n';
+        } else if (tag === 'ul' || tag === 'ol') {
+          result += pad + '<List type="' + (tag === 'ul' ? 'unordered' : 'ordered') + '">\n';
+          Array.from(node.children).forEach(li => {
+            result += pad + '  <ListItem>\n';
+            result += inlineToXml(li.childNodes, indent + 4);
+            result += pad + '  </ListItem>\n';
+          });
+          result += pad + '</List>\n';
+        } else if (['div','section'].includes(tag)) {
+          result += nodeToXml(node.childNodes, indent);
+        } else {
+          result += pad + '<Block type="' + tag + '">\n';
+          result += inlineToXml(node.childNodes, indent + 2);
+          result += pad + '</Block>\n';
+        }
+      }
+    });
+    return result;
+  }
+
+  function inlineToXml(nodes, indent) {
+    let result = '';
+    const pad = ' '.repeat(indent);
+    nodes.forEach(node => {
+      if (node.nodeType === 3) {
+        const text = node.textContent;
+        if (text) result += pad + '<Span>' + escapeXml(text) + '</Span>\n';
+      } else if (node.nodeType === 1) {
+        const tag = node.tagName.toLowerCase();
+        let style = '';
+        if (tag === 'b' || tag === 'strong') style = 'bold';
+        else if (tag === 'i' || tag === 'em') style = 'italic';
+        else if (tag === 'u') style = 'underline';
+        else if (tag === 's' || tag === 'strike') style = 'strikethrough';
+        else if (tag === 'span') {
+          const color = node.style.color;
+          style = color ? 'color:' + color : 'plain';
+        }
+        else style = tag;
+        result += pad + '<Inline style="' + style + '">' + escapeXml(node.textContent) + '</Inline>\n';
+      }
+    });
+    return result;
+  }
+
+  function escapeXml(str) {
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+              .replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+  }
+
+  function syntaxHighlight(xml) {
+    return escapeHtml(xml)
+      .replace(/(&lt;\/?[\w]+)/g, '<span class="tag">$1</span>')
+      .replace(/([\w-]+)=(&quot;[^&]*&quot;)/g, '<span class="attr">$1</span>=<span class="val">$2</span>')
+      .replace(/&gt;([^&\n]+)&lt;/g, '&gt;<span class="text">$1</span>&lt;');
+  }
+  function escapeHtml(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function showXml() {
+    const xml = htmlToXml();
+    xmlView.innerHTML = syntaxHighlight(xml);
+    xmlPanel.classList.add('active');
+    showToast('XML сгенерирован');
+  }
+  function hideXml() { xmlPanel.classList.remove('active'); }
+
+  function copyXml() {
+    const xml = htmlToXml();
+    navigator.clipboard.writeText(xml).then(() => {
+      showToast('XML скопирован в буфер обмена');
+    }).catch(() => {
+      const ta = document.createElement('textarea');
+      ta.value = xml;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      showToast('XML скопирован');
+    });
+  }
+
+  function downloadXml() {
+    const xml = htmlToXml();
+    const blob = new Blob([xml], { type: 'application/xml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'toc_' + Date.now() + '.xml';
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('Файл XML скачан');
+  }
+
+  function loadSampleXml() {
+    const sampleXml = `<?xml version="1.0" encoding="UTF-8"?>
+<TableOfContents>
+  <Content>
+    <Heading level="1">Предисловие</Heading>
+    <Heading level="2">От автора</Heading>
+    <Paragraph><Span>Несколько слов о книге.</Span></Paragraph>
+    <Heading level="1">Часть I</Heading>
+    <List type="ordered">
+      <ListItem><Span>Первый пункт</Span></ListItem>
+      <ListItem><Span>Второй пункт</Span></ListItem>
+    </List>
+    <Heading level="1">Заключение</Heading>
+  </Content>
+</TableOfContents>`;
+    const html = xmlToHtml(sampleXml);
+    editor.innerHTML = html;
+    showToast('Пример XML загружен');
+  }
+
+  function xmlToHtml(xml) {
+    try {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(xml, 'application/xml');
+      if (doc.querySelector('parsererror')) {
+        showToast('Ошибка парсинга XML', true);
+        return '';
+      }
+      return processXmlNodes(doc.documentElement);
+    } catch (e) {
+      showToast('Ошибка: ' + e.message, true);
+      return '';
+    }
+  }
+
+  function processXmlNodes(root) {
+    let html = '';
+    const content = root.querySelector('Content') || root;
+    content.childNodes.forEach(node => {
+      if (node.nodeType !== 1) return;
+      const tag = node.tagName;
+      if (tag === 'Heading') {
+        const level = node.getAttribute('level') || '1';
+        html += '<h' + level + '>' + inlineXmlToHtml(node) + '</h' + level + '>';
+      } else if (tag === 'Paragraph') {
+        html += '<p>' + inlineXmlToHtml(node) + '</p>';
+      } else if (tag === 'List') {
+        const type = node.getAttribute('type') === 'ordered' ? 'ol' : 'ul';
+        html += '<' + type + '>';
+        Array.from(node.children).forEach(li => {
+          html += '<li>' + inlineXmlToHtml(li) + '</li>';
+        });
+        html += '</' + type + '>';
+      } else if (tag === 'Text') {
+        html += '<p>' + escapeHtml(node.textContent) + '</p>';
+      } else if (tag === 'Block') {
+        const type = node.getAttribute('type');
+        html += '<' + (type || tag) + '>' + inlineXmlToHtml(node) + '</' + (type || tag) + '>';
+      }
+    });
+    return html;
+  }
+
+  function inlineXmlToHtml(node) {
+    let html = '';
+    node.childNodes.forEach(n => {
+      if (n.nodeType === 3) html += escapeHtml(n.textContent);
+      else if (n.nodeType === 1) {
+        const style = n.getAttribute('style') || '';
+        const text = escapeHtml(n.textContent);
+        if (style === 'bold') html += '<b>' + text + '</b>';
+        else if (style === 'italic') html += '<i>' + text + '</i>';
+        else if (style === 'underline') html += '<u>' + text + '</u>';
+        else if (style === 'strikethrough') html += '<s>' + text + '</s>';
+        else if (style.startsWith('color:')) html += '<span style="' + style + '">' + text + '</span>';
+        else html += text;
+      }
+    });
+    return html;
+  }
+
+  function clearEditor() {
+    if (confirm('Очистить всё содержимое редактора?')) {
+      editor.innerHTML = '';
+      showToast('Редактор очищен');
+    }
+  }
+
+  function updateStats() {
+    const text = editor.innerText || '';
+    const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+    document.getElementById('wordCount').textContent =
+      'Слов: ' + words + ' | Символов: ' + text.length;
+  }
+  editor.addEventListener('input', updateStats);
+  updateStats();
+
+  function showToast(msg, isError) {
+    toast.textContent = msg;
+    toast.className = 'toast show' + (isError ? ' error' : '');
+    setTimeout(() => toast.className = 'toast', 2500);
+  }
+
+  // ===== API для обмена с хостом (WebView2) =====
+  // Хост не может передать аргументы в функции напрямую через ExecuteScriptAsync,
+  // поэтому PostToScript отправляет структуру как JSON, который разбираем здесь.
+  window.addEventListener('message', function (event) {
+    try { __initToc(event.data); } catch (e) { console.error(e); }
+  });
+
+  function __getEditor() { return document.getElementById('editor'); }
+
+  // Устанавливает HTML-содержимое редактора.
+  window.setEditorHtml = function (html) {
+    var el = __getEditor();
+    if (el) el.innerHTML = html || '';
+  };
+
+  // Возвращает канонический XML оглавления (htmlToXml) для хранения и передачи в хост.
+  window.getTocXml = function () {
+    return htmlToXml();
+  };
+
+
+  // Применяет XML оглавления, пришедший из базы/хоста, к редактору.
+
+  // Применяет XML оглавления, пришедший из базы/хоста, к редактору.
+  function applyToc(xml) {
+    setEditorHtml(xml || '');
+    editor.focus();
+  }
+
+  // Точка входа из хоста: принимает XML-строку или объект {tocXml: ...}.
+  function __initToc(data) {
+    if (!data || typeof data !== 'object') return;
+    var toc = (data.tocXml != null) ? data.tocXml : (typeof data === 'string' ? data : undefined);
+    if (toc && typeof toc === 'string') applyToc(toc.trim());
+  }
+    </script>
+</body>
+</html>

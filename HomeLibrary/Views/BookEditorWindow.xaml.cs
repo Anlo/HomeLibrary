@@ -1,4 +1,7 @@
-﻿using System.Windows;
+﻿using System.IO;
+using System.Reflection;
+using System.Windows;
+using System.Windows.Threading;
 using HomeLibrary.Models;
 using HomeLibrary.ViewModels;
 using Microsoft.Web.WebView2.Core;
@@ -16,82 +19,38 @@ namespace HomeLibrary.Views
 
         private async void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            // Инициализация WebView2
-            await HtmlEditor.EnsureCoreWebView2Async(
-                await CoreWebView2Environment.CreateAsync());
+            // Даем WPF выполнить первичную разметку, чтобы WebView2 имел реальный размер.
+            await Dispatcher.BeginInvoke(DispatcherPriority.Background, (Action)(() => { }));
 
-            // Подписываемся на событие завершения навигации
-            var tcs = new TaskCompletionSource<bool>();
-            HtmlEditor.NavigationCompleted += (s, ev) =>
-            {
-                tcs.TrySetResult(ev.IsSuccess);
-            };
+            await HtmlEditor.EnsureCoreWebView2Async(await CoreWebView2Environment.CreateAsync());
 
-
-            // HTML с Quill.js (бесплатный редактор)
-            var html = @"
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset='utf-8'>
-    <link href='https://cdn.quilljs.com/1.3.6/quill.snow.css' rel='stylesheet'>
-    <script src='https://cdn.quilljs.com/1.3.6/quill.js'></script>
-    <style>
-        body { margin: 0; padding: 10px; font-family: Arial, sans-serif; }
-        #editor { height: 400px; font-size: 14px; }
-        .ql-container { font-family: Arial, sans-serif; }
-    </style>
-</head>
-<body>
-    <div id='editor'></div>
-    <script>
-        var quill = new Quill('#editor', {
-            theme: 'snow',
-            placeholder: 'Введите оглавление книги...',
-            modules: {
-                toolbar: [
-                    [{ 'header': [1, 2, 3, false] }],
-                    ['bold', 'italic', 'underline'],
-                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                    ['link', 'image'],
-                    ['clean']
-                ]
-            }
-        });
-
-        // Функция для получения HTML содержимого
-        window.getEditorHtml = function() {
-            return quill.root.innerHTML;
-        };
-
-        // Функция для установки HTML содержимого
-        window.setEditorHtml = function(html) {
-            quill.root.innerHTML = html || '';
-        };
-    </script>
-</body>
-</html>";
-
+            var html = LoadEditorHtml();
             HtmlEditor.NavigateToString(html);
 
-            // Ждём загрузки HTML
-            await tcs.Task;
+            // Ждём навигацию к содержимому (не к initial about:blank — иначе гонка и вис).
+            var navTcs = new TaskCompletionSource<bool>();
+            HtmlEditor.CoreWebView2.NavigationCompleted += (s, ev) => navTcs.TrySetResult(true);
+            await navTcs.Task;
 
-            // Загружаем существующее оглавление, если оно есть
             var vm = (BookEditorViewModel)DataContext;
-            var existingContent = ExtractContent(vm.Book.TableOfContentsXml);
-            if (!string.IsNullOrWhiteSpace(existingContent))
-            {
-                // Экранируем содержимое для JavaScript
-                var escapedContent = existingContent
-                    .Replace("\\", "\\\\")
-                    .Replace("'", "\\'")
-                    .Replace("\n", "\\n")
-                    .Replace("\r", "\\r");
+            var storedXml = vm.Book.TableOfContentsXml ?? string.Empty;
 
-                await HtmlEditor.ExecuteScriptAsync(
-                    $"window.setEditorHtml('{escapedContent}');");
-            }
+            var htmlFromXml = await HtmlEditor.ExecuteScriptAsync(
+                $"window.xmlToHtml({JsonSerializer.Serialize(storedXml)});");
+            var editableHtml = JsonSerializer.Deserialize<string>(htmlFromXml) ?? string.Empty;
+
+            await HtmlEditor.ExecuteScriptAsync(
+                $"window.setEditorHtml({JsonSerializer.Serialize(editableHtml)});");
+        }
+
+        private static string LoadEditorHtml()
+        {
+            using var stream = Assembly.GetExecutingAssembly()
+                .GetManifestResourceStream("HomeLibrary.Helpers.XmlEditor.html");
+            if (stream is null)
+                throw new InvalidOperationException("Embedded resource 'HomeLibrary.Helpers.XmlEditor.html' not found.");
+            using var reader = new StreamReader(stream);
+            return reader.ReadToEnd();
         }
 
         // Публичный метод для получения XML из редактора
@@ -99,35 +58,13 @@ namespace HomeLibrary.Views
         {
             try
             {
-                // Выполняем JavaScript и получаем HTML содержимое
-                var result = await HtmlEditor.ExecuteScriptAsync("window.getEditorHtml();");
-
-                // ExecuteScriptAsync возвращает JSON-строку в кавычках, нужно убрать их
-                var htmlContent = JsonSerializer.Deserialize<string>(result) ?? string.Empty;
-
-                if (string.IsNullOrWhiteSpace(htmlContent))
-                    return string.Empty;
-
-                // Оборачиваем в XML
-                return $"<TableOfContents><Content><![CDATA[{htmlContent}]]></Content></TableOfContents>";
+                var result = await HtmlEditor.ExecuteScriptAsync("window.getTocXml();");
+                var xml = JsonSerializer.Deserialize<string>(result) ?? string.Empty;
+                return xml;
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Ошибка получения содержимого: {ex.Message}");
-                return string.Empty;
-            }
-        }
-
-        private static string ExtractContent(string xml)
-        {
-            if (string.IsNullOrWhiteSpace(xml)) return string.Empty;
-            try
-            {
-                var doc = System.Xml.Linq.XDocument.Parse(xml);
-                return doc.Root?.Element("Content")?.Value ?? string.Empty;
-            }
-            catch
-            {
                 return string.Empty;
             }
         }
