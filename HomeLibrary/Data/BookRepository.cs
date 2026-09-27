@@ -16,6 +16,7 @@ namespace HomeLibrary.Data
             }
             catch (SqlException ex)
             {
+                conn.Dispose();
                 throw new Exception(
                     "Не удалось подключиться к БД. Убедитесь, что SQL Server LocalDB запущен и база HomeLibrary создана.", ex);
             }
