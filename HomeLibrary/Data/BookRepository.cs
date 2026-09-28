@@ -16,6 +16,7 @@ namespace HomeLibrary.Data
             }
             catch (SqlException ex)
             {
+                conn.Dispose();
                 throw new Exception(
                     "Не удалось подключиться к БД. Убедитесь, что SQL Server LocalDB запущен и база HomeLibrary создана.", ex);
             }
@@ -55,7 +56,7 @@ namespace HomeLibrary.Data
             cmd.Parameters.AddWithValue("@TableOfContents",
                 string.IsNullOrWhiteSpace(book.TableOfContentsXml)
                     ? DBNull.Value
-                    : (object)book.TableOfContentsXml);
+                    : (object)NormalizeTableOfContentsXml(book.TableOfContentsXml));
 
             var result = cmd.ExecuteScalar();
             return Convert.ToInt32(result);
@@ -75,7 +76,7 @@ namespace HomeLibrary.Data
             cmd.Parameters.AddWithValue("@TableOfContents",
                 string.IsNullOrWhiteSpace(book.TableOfContentsXml)
                     ? DBNull.Value
-                    : (object)book.TableOfContentsXml);
+                    : (object)NormalizeTableOfContentsXml(book.TableOfContentsXml));
 
             cmd.ExecuteNonQuery();
         }
@@ -97,6 +98,19 @@ namespace HomeLibrary.Data
             cmd.Parameters.AddWithValue("@SearchString", searchString);
 
             return ReadBooks(cmd);
+        }
+
+        private static string NormalizeTableOfContentsXml(string xml)
+        {
+            if (string.IsNullOrWhiteSpace(xml)) return xml;
+            var trimmed = xml.TrimStart();
+            if (trimmed.StartsWith("<?", StringComparison.OrdinalIgnoreCase))
+            {
+                var end = trimmed.IndexOf("?>");
+                if (end >= 0)
+                    trimmed = trimmed.Substring(end + 2).TrimStart();
+            }
+            return trimmed;
         }
 
         private static List<Book> ReadBooks(SqlCommand cmd)

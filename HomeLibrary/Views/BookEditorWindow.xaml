@@ -38,7 +38,7 @@
             <TextBox Grid.Row="1" Grid.Column="3" Text="{Binding Book.PageCount, UpdateSourceTrigger=PropertyChanged}" Margin="5,0"/>
         </Grid>
 
-        <!-- HTML-редактор оглавления (WebView2 + TinyMCE) -->
+        <!-- HTML-редактор оглавления (WebView2 + contenteditable/execCommand) -->
         <GroupBox Grid.Row="1" Header="Оглавление (HTML → XML)">
             <wv2:WebView2 x:Name="HtmlEditor"/>
         </GroupBox>

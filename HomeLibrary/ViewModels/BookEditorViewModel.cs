@@ -20,7 +20,7 @@ namespace HomeLibrary.ViewModels
         }
 
         [RelayCommand]
-        private async void Save(Window window)
+        private async Task Save(Window window)
         {
             if (string.IsNullOrWhiteSpace(Book.Title) ||
                 string.IsNullOrWhiteSpace(Book.Author))
@@ -42,7 +42,7 @@ namespace HomeLibrary.ViewModels
             try
             {
                 if (_isNew)
-                    _repository.Insert(Book);
+                    Book.Id = _repository.Insert(Book);
                 else
                     _repository.Update(Book);
 
