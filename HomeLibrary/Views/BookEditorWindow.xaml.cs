@@ -35,12 +35,15 @@ namespace HomeLibrary.Views
             var vm = (BookEditorViewModel)DataContext;
             var storedXml = vm.Book.TableOfContentsXml ?? string.Empty;
 
-            var htmlFromXml = await HtmlEditor.ExecuteScriptAsync(
-                $"window.xmlToHtml({JsonSerializer.Serialize(storedXml)});");
-            var editableHtml = JsonSerializer.Deserialize<string>(htmlFromXml) ?? string.Empty;
+            if (!string.IsNullOrWhiteSpace(storedXml))
+            {
+                var htmlFromXml = await HtmlEditor.ExecuteScriptAsync(
+                    $"window.xmlToHtml({JsonSerializer.Serialize(storedXml)});");
+                var editableHtml = JsonSerializer.Deserialize<string>(htmlFromXml) ?? string.Empty;
 
-            await HtmlEditor.ExecuteScriptAsync(
-                $"window.setEditorHtml({JsonSerializer.Serialize(editableHtml)});");
+                await HtmlEditor.ExecuteScriptAsync(
+                    $"window.setEditorHtml({JsonSerializer.Serialize(editableHtml)});");
+            }
         }
 
         private static string LoadEditorHtml()
