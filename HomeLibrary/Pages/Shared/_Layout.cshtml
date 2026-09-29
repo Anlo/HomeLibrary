@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Домашняя библиотека</title>
+    <link rel="stylesheet" href="/css/site.css" />
+</head>
+<body>
+    <header class="topbar">
+        <div class="container">
+            <a class="brand" href="/">📚 Домашняя библиотека</a>
+            <nav>
+                <a href="/">Список книг</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        @if (TempData["Message"] != null)
+        {
+            <div class="toast message">
+                <span>@TempData["Message"]</span>
+            </div>
+        }
+
+        @RenderBody()
+    </main>
+
+    <footer class="footer container">
+        <span>Домашняя библиотека — локальная версия</span>
+    </footer>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
