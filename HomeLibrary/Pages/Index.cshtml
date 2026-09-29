@@ -1,0 +1,69 @@
+@page
+@model IndexPageModel
+ @{
+     ViewData["Title"] = "Список книг";
+ }
+
+<div class="card">
+    <h1>Список книг</h1>
+
+    <form method="get" class="search-form">
+        <input type="text" name="SearchText" value="@Model.SearchText" placeholder="Поиск по автору или названию" />
+        <button type="submit" class="btn btn-primary">Найти</button>
+        @if (!string.IsNullOrWhiteSpace(Model.SearchText))
+        {
+            <a class="btn" href="/">Сбросить</a>
+        }
+    </form>
+
+    <div class="btn-toolbar">
+        <a class="btn btn-primary" href="/Book/Edit">Добавить</a>
+    </div>
+
+    @if (Model.Books.Count == 0)
+    {
+        <table>
+            <tbody>
+                <tr class="empty-row">
+                    <td colspan="5">Книги не найдены. Добавьте первую книгу.</td>
+                </tr>
+            </tbody>
+        </table>
+    }
+    else
+    {
+        <table>
+            <thead>
+                <tr>
+                    <th>Автор</th>
+                    <th>Название</th>
+                    <th>Год</th>
+                    <th>Страниц</th>
+                    <th style="width: 200px;">Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var book in Model.Books)
+                {
+                    <tr>
+                        <td>@book.Author</td>
+                        <td>@book.Title</td>
+                        <td>@book.PublishYear</td>
+                        <td>@book.PageCount</td>
+                        <td>
+                            <div class="actions">
+                                <a class="btn" href="/Book/Edit/@book.Id">Редактировать</a>
+                                <form method="post" asp-page-handler="Delete" onsubmit="return confirm('Удалить книгу «@book.Title»?');">
+                                    <input type="hidden" name="id" value="@book.Id" />
+                                    <button type="submit" class="btn btn-danger">Удалить</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+
+    <div class="count">Всего книг: @Model.TotalCount</div>
+</div>

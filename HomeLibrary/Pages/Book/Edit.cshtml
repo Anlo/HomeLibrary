@@ -1,0 +1,79 @@
+@page "{id:int?}"
+@model EditPageModel
+@{
+    ViewData["Title"] = Model.Book.Id == 0 ? "Добавление книги" : "Редактирование книги";
+    var isEdit = Model.Book.Id > 0;
+    var storedXml = @Html.Raw(JsonSerializer.Serialize(Model.Book.TableOfContentsXml));
+}
+
+<div class="card">
+    <h1>@(isEdit ? "Редактирование книги" : "Добавление книги")</h1>
+
+    @if (Model.ModelState.ErrorCount > 0)
+    {
+        <div class="model-error">
+            @foreach (var error in Model.ModelState.Values.SelectMany(v => v.Errors))
+            {
+                <div>@error.ErrorMessage</div>
+            }
+        </div>
+    }
+
+    <form method="post" onsubmit="return syncToc();">
+        <div class="form-grid">
+            <label for="Book_Author">Автор:</label>
+            <input id="Book_Author" name="Book.Author" type="text" value="@Model.Book.Author" />
+
+            <label for="Book_Title">Название:</label>
+            <input id="Book_Title" name="Book.Title" type="text" value="@Model.Book.Title" />
+
+            <label for="Book_PublishYear">Год издания:</label>
+            <input id="Book_PublishYear" name="Book.PublishYear" type="number" value="@Model.Book.PublishYear" />
+
+            <label for="Book_PageCount">Кол-во страниц:</label>
+            <input id="Book_PageCount" name="Book.PageCount" type="number" value="@Model.Book.PageCount" />
+        </div>
+
+        <div class="editor-wrap">
+            <iframe id="tocFrame" src="/editor/XmlEditor.html" onload="onFrameLoad()"></iframe>
+        </div>
+
+        <input type="hidden" id="Book_Id" name="Book.Id" value="@Model.Book.Id" />
+
+        <input type="hidden" id="Book_TableOfContentsXml" name="Book.TableOfContentsXml" value="@Model.Book.TableOfContentsXml" />
+
+        <div class="form-actions">
+            <a class="btn" href="/">Отмена</a>
+            <button type="submit" class="btn btn-primary">Сохранить</button>
+        </div>
+    </form>
+</div>
+
+<script>
+    var storedXml = @Html.Raw(JsonSerializer.Serialize(Model.Book.TableOfContentsXml));
+
+    function getFrame() {
+        return document.getElementById('tocFrame').contentWindow;
+    }
+
+    function onFrameLoad() {
+        var fw = getFrame();
+        if (!fw) return;
+        if (!storedXml) return;
+        try {
+            var editableHtml = fw.xmlToHtml(storedXml);
+            fw.setEditorHtml(editableHtml);
+        } catch (e) {
+            console.error('Инициализация редактора:', e);
+        }
+    }
+
+    function syncToc() {
+        var fw = getFrame();
+        if (fw && typeof fw.getTocXml === 'function') {
+            var xml = fw.getTocXml();
+            document.getElementById('Book_TableOfContentsXml').value = xml;
+        }
+        return true;
+    }
+</script>
